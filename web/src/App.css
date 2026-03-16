@@ -1,0 +1,144 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.container {
+  max-width: 640px;
+  width: 100%;
+  padding: 0 24px;
+}
+
+.badge {
+  display: inline-block;
+  background: #22d3ee20;
+  color: #22d3ee;
+  border: 1px solid #22d3ee40;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  margin-bottom: 16px;
+}
+
+h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: #94a3b8;
+  font-size: 15px;
+  margin-bottom: 32px;
+}
+
+.card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 28px;
+  margin-bottom: 16px;
+}
+
+.card h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stage {
+  display: flex;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid #1e293b;
+}
+
+.stage:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.stage:first-child {
+  padding-top: 0;
+}
+
+.stage-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.stage-number.builder {
+  background: #7c3aed20;
+  color: #a78bfa;
+  border: 1px solid #7c3aed40;
+}
+
+.stage-number.production {
+  background: #059669twentieth;
+  background: #05966920;
+  color: #34d399;
+  border: 1px solid #05966940;
+}
+
+.stage-info strong {
+  display: block;
+  font-size: 14px;
+  color: #e2e8f0;
+  margin-bottom: 4px;
+}
+
+.stage-info span {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.result-card {
+  background: #05966910;
+  border: 1px solid #05966940;
+  border-radius: 12px;
+  padding: 20px 28px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.result-icon {
+  font-size: 28px;
+}
+
+.result-card p {
+  font-size: 14px;
+  color: #34d399;
+  font-weight: 500;
+}
+
+.result-card small {
+  font-size: 12px;
+  color: #64748b;
+}
