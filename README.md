@@ -1,52 +1,52 @@
 # 🐳 Docker Image Optimization
 
-Demonstração prática de como reduzir drasticamente o tamanho de imagens Docker usando **multi-stage builds** — aplicado a uma API Node.js (TypeScript + esbuild) e um frontend React (Vite + nginx).
+A practical demonstration of how to drastically reduce Docker image sizes using **multi-stage builds** — applied to a Node.js API (TypeScript + esbuild) and a React frontend (Vite + nginx).
 
 ---
 
-## 📊 Comparação de Tamanhos
+## 📊 Size Comparison
 
-| Imagem | Estratégia | Tamanho |
-|--------|-----------|---------|
-| `node:20` + node_modules + devDeps | ❌ Ingênua (sem otimização) | ~1.2 GB |
-| `node:20-alpine` + apenas prod deps | ⚠️ Single-stage otimizada | ~230 MB |
-| `node:20-alpine` + bundle esbuild | ✅ Multi-stage + bundle | ~195 MB |
-| `nginx:alpine` + `/dist` estático | ✅ Multi-stage React | ~25 MB |
+| Image | Strategy | Size |
+|-------|----------|------|
+| `node:20` + node_modules + devDeps | ❌ Naive (no optimization) | ~1.2 GB |
+| `node:20-alpine` + prod deps only | ⚠️ Single-stage optimized | ~230 MB |
+| `node:20-alpine` + esbuild bundle | ✅ Multi-stage + bundle | ~195 MB |
+| `nginx:alpine` + static `/dist` | ✅ Multi-stage React | ~25 MB |
 
-> A imagem do frontend caiu de ~500MB para ~25MB — **uma redução de 95%**.
+> The frontend image dropped from ~500MB to ~25MB — **a 95% reduction**.
 
 ---
 
-## 🏗️ Como funciona o Multi-Stage Build
+## 🏗️ How Multi-Stage Builds Work
 
-A ideia central é usar **múltiplos estágios** no Dockerfile. Cada estágio parte de uma imagem base diferente, e apenas os artefatos necessários são copiados para o estágio seguinte.
+The core idea is to use **multiple stages** in the Dockerfile. Each stage starts from a different base image, and only the necessary artifacts are copied into the next stage.
 
 ```
 ┌─────────────────────────────┐        ┌──────────────────────────────┐
 │       Stage: builder         │        │      Stage: production        │
-│  node:20-alpine              │        │  nginx:alpine (React)         │
-│                              │   →    │  node:20-alpine (API)         │
-│  ✔ node_modules              │  copia │                               │
-│  ✔ devDependencies           │  só o  │  ✔ /dist  ou  bundle.js       │
+│  node:20-alpine              │        │  nginx:alpine  (React)        │
+│                              │  →     │  node:20-alpine (API)         │
+│  ✔ node_modules              │ copies │                               │
+│  ✔ devDependencies           │  only  │  ✔ /dist  or  bundle.js       │
 │  ✔ TypeScript, esbuild...    │  build │  ✖ node_modules               │
-│                              │        │  ✖ devDependencies            │
-└─────────────────────────────┘        │  ✖ código-fonte TypeScript    │
+│                              │ output │  ✖ devDependencies            │
+└─────────────────────────────┘        │  ✖ TypeScript source          │
                                         └──────────────────────────────┘
 ```
 
 ---
 
-## 🗂️ Estrutura do Projeto
+## 🗂️ Project Structure
 
 ```
 image-optimization/
-├── api/                      # API Node.js com TypeScript + esbuild
+├── api/                      # Node.js API with TypeScript + esbuild
 │   ├── src/
-│   │   └── index.ts          # Express: GET / e GET /health
+│   │   └── index.ts          # Express: GET / and GET /health
 │   ├── package.json
 │   └── Dockerfile            # Multi-stage: builder → node:20-alpine
 │
-├── web/                      # Frontend React com Vite
+├── web/                      # React frontend with Vite
 │   ├── src/
 │   │   ├── App.jsx
 │   │   └── App.css
@@ -55,110 +55,110 @@ image-optimization/
 │   ├── package.json
 │   └── Dockerfile            # Multi-stage: builder → nginx:alpine
 │
-└── docker-compose.yml        # Sobe os dois serviços
+└── docker-compose.yml        # Runs both services
 ```
 
 ---
 
-## 🔍 Estratégia por Serviço
+## 🔍 Strategy per Service
 
 ### API — TypeScript + esbuild
 
-O esbuild compila o TypeScript e empacota todas as dependências num **único arquivo JS**. A imagem final não precisa de `node_modules` pois o Express já está embutido no bundle.
+esbuild compiles TypeScript and bundles all dependencies into a **single JS file**. The final image doesn't need `node_modules` because Express is already embedded in the bundle.
 
 ```dockerfile
-# Stage 1: compila tudo
+# Stage 1: compile everything
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm install                          # instala devDeps + deps
+RUN npm install                          # installs devDeps + deps
 COPY src ./src
-RUN npm run build                        # gera dist/index.js com express embutido
+RUN npm run build                        # outputs dist/index.js with Express bundled in
 
-# Stage 2: apenas o runtime + o bundle
+# Stage 2: runtime + bundle only
 FROM node:20-alpine
 WORKDIR /app
 COPY --from=builder /app/dist/index.js ./index.js
-# ✖ node_modules não existe aqui
+# ✖ node_modules does not exist here
 EXPOSE 3000
 CMD ["node", "index.js"]
 ```
 
 ### Frontend — React + Vite → nginx
 
-O Vite gera arquivos estáticos otimizados em `/dist`. O nginx serve esses arquivos sem precisar de Node ou `node_modules`.
+Vite generates optimized static files in `/dist`. nginx serves those files without needing Node or `node_modules`.
 
 ```dockerfile
-# Stage 1: build do React
+# Stage 1: React build
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
-RUN npm run build                        # gera /dist com HTML, CSS, JS minificados
+RUN npm run build                        # outputs /dist with minified HTML, CSS, JS
 
-# Stage 2: nginx serve os arquivos estáticos
+# Stage 2: nginx serves the static files
 FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
-# ✖ Node não existe aqui
-# ✖ node_modules não existe aqui
+# ✖ Node does not exist here
+# ✖ node_modules does not exist here
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 ```
 
 ---
 
-## 🚀 Como rodar
+## 🚀 Getting Started
 
-**Pré-requisito:** Docker Desktop instalado.
+**Prerequisite:** Docker Desktop installed.
 
 ```bash
-# Clona o repositório
+# Clone the repository
 git clone https://github.com/JoseMMello/optimization-imagens-docker.git
 cd optimization-imagens-docker
 
-# Sobe os dois serviços
+# Build and start both services
 docker compose up --build
 ```
 
-| Serviço | URL |
+| Service | URL |
 |---------|-----|
-| Frontend React | http://localhost:8080 |
-| API Node | http://localhost:3000 |
-| Health check | http://localhost:3000/health |
+| React Frontend | http://localhost:8080 |
+| Node API | http://localhost:3000 |
+| Health Check | http://localhost:3000/health |
 
 ---
 
-## 🔬 Verificando na prática
+## 🔬 Verifying in Practice
 
-Após o build, compare os tamanhos:
+After the build, compare image sizes:
 
 ```bash
 docker images | grep optimization
 ```
 
-Confirme que o `node_modules` **não existe** no container de produção:
+Confirm that `node_modules` **does not exist** in the production containers:
 
 ```bash
-# Frontend: não existe /app — apenas arquivos estáticos no nginx
+# Frontend: no /app — only static files served by nginx
 docker exec -it <web-container> sh
 ls /usr/share/nginx/html
 
-# API: não existe node_modules — apenas o bundle
+# API: no node_modules — only the bundle
 docker exec -it <api-container> sh
 ls /app
-# → index.js   (só isso)
+# → index.js   (that's it)
 ```
 
 ---
 
-## 💡 Por que isso importa?
+## 💡 Why This Matters
 
-- **CI/CD mais rápido** — imagens menores são transferidas e deployadas mais rapidamente
-- **Menor superfície de ataque** — ferramentas de build e código-fonte não vão para produção
-- **Menos uso de disco** no registry e nos servidores
-- **Pulls mais rápidos** em escala horizontal (Kubernetes, ECS, etc.)
+- **Faster CI/CD** — smaller images are transferred and deployed more quickly
+- **Reduced attack surface** — build tools and source code never reach production
+- **Lower disk usage** on the registry and servers
+- **Faster pulls** at horizontal scale (Kubernetes, ECS, etc.)
 
 ---
 
-Feito por [José Martins](https://github.com/JoseMMello)
+Made by [José Martins](https://github.com/JoseMMello)
